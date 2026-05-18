@@ -3,8 +3,8 @@ app.py — Presentation & UI Controller Layer
 ============================================
 Strictly the interface skin. Contains zero SQL, zero API client calls.
 All computation is delegated to:
-    - services/gemini_service.py  → sentiment analysis
-    - database/db_manager.py      → persistence
+    - services.py  → sentiment analysis
+    - database.py  → persistence
 
 Run with:
     streamlit run app.py
@@ -13,13 +13,13 @@ Run with:
 import streamlit as st
 
 from config import DB_NAME
-from database.db_manager import (
+from database import (
     init_db,
     save_summary,
     get_summaries_by_category,
     get_summary_by_id,
 )
-from services.gemini_service import analyze_review_sentiment
+from services import analyze_review_sentiment
 
 # ---------------------------------------------------------------------------
 # Bootstrap — ensure schema exists before any UI renders
