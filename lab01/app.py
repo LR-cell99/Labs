@@ -3,14 +3,17 @@ import PyPDF2
 import re
 import os
 from collections import Counter
-from openai import OpenAI
+from dotenv import load_dotenv
+from google import genai
+
+load_dotenv()
 
 # ── Load API key ──────────────────────────────
-def get_openai_key():
+def get_gemini_key():
     try:
-        return st.secrets["OPENAI_API_KEY"]
+        return st.secrets["GEMINI_API_KEY"]
     except Exception:
-        return os.getenv("OPENAI_API_KEY")
+        return os.getenv("GEMINI_API_KEY")
 
 # ── Extract text from PDF ─────────────────────
 def extract_pdf_text(uploaded_file):
@@ -45,13 +48,13 @@ def compute_match(resume_text, job_text):
     score     = round(len(matched) / max(len(job_kw), 1) * 100)
     return score, matched, missing
 
-# ── AI feedback ───────────────────────────────
+# ── AI feedback via Gemini ────────────────────
 def ai_feedback(resume_text, job_text, score, matched, missing):
-    api_key = get_openai_key()
+    api_key = get_gemini_key()
     if not api_key:
         return None
     try:
-        client = OpenAI(api_key=api_key)
+        client = genai.Client(api_key=api_key)
         prompt = f"""You are a career coach. Given this resume and job description, give brief feedback.
 
 Resume (first 2000 chars): {resume_text[:2000]}
@@ -62,14 +65,13 @@ Missing Keywords: {', '.join(missing[:15])}
 
 Give 3 short bullet points on how to improve the resume for this role."""
 
-        response = client.chat.completions.create(
-            model="gpt-4o-mini",
-            messages=[{"role": "user", "content": prompt}],
-            temperature=0.5,
+        response = client.models.generate_content(
+            model="gemini-2.5-flash",
+            contents=prompt,
         )
-        return response.choices[0].message.content.strip()
+        return response.text.strip()
     except Exception as e:
-        return f"AI feedback unavailable: {e}"
+        return None
 
 # ─────────────────────────────────────────────
 # UI
@@ -113,10 +115,10 @@ if st.button("Analyze Resume"):
 
     # AI feedback
     st.write("### 💡 AI Suggestions")
-    with st.spinner("Getting AI feedback..."):
+    with st.spinner("Getting AI feedback from Gemini..."):
         feedback = ai_feedback(resume_text, job_description, score, matched, missing)
 
     if feedback:
         st.write(feedback)
     else:
-        st.info("Add an OPENAI_API_KEY to enable AI suggestions.")
+        st.info("AI suggestions unavailable — add GEMINI_API_KEY to your .env file.")
